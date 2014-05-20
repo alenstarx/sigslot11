@@ -3,96 +3,94 @@
 
 #include <list>
 
-namespace sigslot11 {
-
-template<typename R> class Function;
-
-template<typename R, typename... Args>
-class Function<R(Args...)>
+namespace sigslot11
 {
-    void *m_this_ptr;
-    R (*m_stub_ptr)(void *, Args...);
 
-    template<typename I, typename F>
-    Function(I&& this_ptr, F&& stub_ptr) :
-        m_this_ptr(std::forward<I>(this_ptr)),
-        m_stub_ptr(std::forward<F>(stub_ptr)) {}
-
-public:
-
-    template<R (*func_ptr)(Args...)>
-    static inline Function bind()
-    {
-        return { nullptr, [] (void *, Args... args) {
-            return (*func_ptr)(args...); }
-        };
-    }
+    template<typename ReturnType> class Function;
     
-    template<typename T, R (T::*method_ptr)(Args...)>
-    static inline Function bind(T* pointer)
+    template<typename ReturnType, typename... Args>
+    class Function<ReturnType(Args...)>
     {
-        return { pointer, [] (void *this_ptr, Args... args) {
-            return (static_cast<T*>(this_ptr)->*method_ptr)(args...); }
-        };
-    }
-    
-    template<typename T, R (T::*method_ptr)(Args...) const>
-    static inline Function bind(T* pointer)
-    {
-        return { pointer, [] (void *this_ptr, Args... args) {
-            return (static_cast<const T*>(this_ptr)->*method_ptr)(args...); }
-        };
-    }
-
-    R operator() (Args&&... args) const
-    {
-        return (*m_stub_ptr)(m_this_ptr, args...);
-    }
-};
-
-
-template <typename R> class Signal;
-template <typename R, typename... Args>
-class Signal<R(Args...)>
-{
-    typedef sigslot11::Function<R(Args...)> Function;
-    std::list<Function> slots;
-
-public:
-
-    template <R (*func_ptr)(Args...)>
-    void connect()
-    {
-        auto fn = Function::template bind<func_ptr>();
-        slots.push_back(fn);
-    }
-    
-    template <typename T, R (T::*meth_ptr)(Args...)>
-    void connect(T *instance)
-    {
-        auto fn = Function::template bind<T, meth_ptr>(instance);
-        slots.push_back(fn);
-    }
-    
-    template <typename T, R (T::*meth_ptr)(Args...) const>
-    void connect(T *instance)
-    {
-        auto fn = Function::template bind<T, meth_ptr>(instance);
-        slots.push_back(fn);
-    }
-    
-    void disconnect()
-    {
-        slots.clear();
-    }
-
-    void operator()(Args... var) const
-    {
-        for (auto const &slot : slots) {
-            slot(std::forward<Args>(var)...);
+    public:
+        template<ReturnType (*functionPtr)(Args...)>
+        static inline Function bind()
+        {
+            return { nullptr, [] (void *, Args... args) {
+                return (*functionPtr)(args...); }
+            };
         }
-    }
-};
+    
+        template<typename Class, ReturnType (Class::*methodPtr)(Args...)>
+        static inline Function bind(Class *pointer)
+        {
+            return { pointer, [] (void *classPtr, Args... args) {
+                return (static_cast<Class*>(classPtr)->*methodPtr)(args...); }
+            };
+        }
+    
+        template<typename Class, ReturnType (Class::*methodPtr)(Args...) const>
+        static inline Function bind(Class *pointer)
+        {
+            return { pointer, [] (void *classPtr, Args... args) {
+                return (static_cast<const Class*>(classPtr)->*methodPtr)(args...); }
+            };
+        }
+
+        ReturnType operator() (Args&&... args) const
+        {
+            return (*functionPtr)(classPtr, args...);
+        }
+        
+    private:
+        void *classPtr;
+        ReturnType (*functionPtr)(void *, Args...);
+
+        template<typename ClassPtr, typename FunctionPtr>
+        Function(ClassPtr &&classPtr, FunctionPtr &&functionPtr) :
+                 classPtr(std::forward<ClassPtr>(classPtr)),
+                 functionPtr(std::forward<FunctionPtr>(functionPtr)) {}
+    };
+
+    template <typename ReturnType> class Signal;
+    
+    template <typename ReturnType, typename... Args>
+    class Signal<ReturnType(Args...)>
+    {
+    public:
+        template <ReturnType (*functionPtr)(Args...)>
+        void connect()
+        {
+            slots.push_back(Function::template bind<functionPtr>());
+        }
+    
+        template <typename Class, ReturnType (Class::*methodPtr)(Args...)>
+        void connect(Class *instance)
+        {
+            slots.push_back(Function::template bind<Class, methodPtr>(instance));
+        }
+    
+        template <typename Class, ReturnType (Class::*methodPtr)(Args...) const>
+        void connect(Class *instance)
+        {
+            slots.push_back(Function::template bind<Class, methodPtr>(instance));
+        }
+    
+        void disconnectAll()
+        {
+            slots.clear();
+        }
+
+        void operator()(Args... args) const
+        {
+            for (const auto &slot : slots) {
+                slot(std::forward<Args>(args)...);
+            }
+        }
+        
+    private:
+        typedef sigslot11::Function<ReturnType(Args...)> Function;
+        std::list<Function> slots;
+    };
 
 }
 
