@@ -6,34 +6,31 @@ signals and slots using c++11 magic
 example
 -------
 
-```
+```c++
 #include "sigslot11.h"
 #include <iostream>
 
-class Button
-{
+class Button {
 public:
-    void push()
-    {
+    void push() {
         std::cout << "The button was pushed!" << std::endl;
     }
 };
 
-class Window
-{
+class Window {
 public:
-    sigslot11::Signal<void()> pushButton;
+    sigslot11::Signal<void()> push_button;
 };
 
 int main()
 {
     Window window;
     Button button;
+
+    window.push_button.connect<Button, &Button::push>(&button);
     
-    window.pushButton.connect<Button, &Button::push>(&button);
-    
-    window.pushButton();
-    
+    window.push_button();
+
     return 0;
 }
 ```

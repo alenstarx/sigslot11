@@ -1,25 +1,21 @@
-#include "sigslot11.h"
+#include "sigslot11.hpp"
 #include <iostream>
 
-class Light
-{
+class Light {
 public:
-    void toggle()
-    {
-        isLit = !isLit;
+    void toggle() {
+        is_lit = !is_lit;
     }
-    
-    void print()
-    {
-        std::cout << "The light is " << (isLit ? "on" : "off") << std::endl;
+
+    void print() {
+        std::cout << "The light is " << (is_lit ? "on" : "off") << std::endl;
     }
-   
+
 private:
-    bool isLit = false;
+    bool is_lit = false;
 };
 
-class Switch
-{
+class Switch {
 public:
     sigslot11::Signal<void()> click;
 };
@@ -29,13 +25,13 @@ int main()
     Light l;
     Switch s;
     s.click.connect<Light, &Light::toggle>(&l);
-    
+
     l.print();
     s.click();
     l.print();
-    s.click.disconnectAll();
+    s.click.disconnect_all();
     s.click();
     l.print();
-    
+
     return 0;
 }
